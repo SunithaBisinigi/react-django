@@ -48,17 +48,24 @@ class ApprovalListView(mixins.ListModelMixin, generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
-        
+    
 class UpdateApprovalView(generics.UpdateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserProfileSerializer
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        print("instance...............",instance)
-        current_approval = instance.approval
         new_approval = request.data.get('approval', None)
 
+        # If the new approval is 'p', update without checking the current status
+        if new_approval == 'p':
+            instance.approval = new_approval
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # If the new approval is 'a' or 'r', check the current status
+        current_approval = instance.approval
         if current_approval == 'p' and new_approval in ['a', 'r']:
             instance.approval = new_approval
             instance.save()
@@ -66,6 +73,25 @@ class UpdateApprovalView(generics.UpdateAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({'error': 'Invalid approval update.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+        
+# class UpdateApprovalView(generics.UpdateAPIView):
+#     queryset = CustomUser.objects.all()
+#     serializer_class = UserProfileSerializer
+
+#     def update(self, request, *args, **kwargs):
+#         instance = self.get_object()
+#         print("instance...............",instance)
+#         current_approval = instance.approval
+#         new_approval = request.data.get('approval', None)
+
+#         if current_approval == 'p' and new_approval in ['a', 'r']:
+#             instance.approval = new_approval
+#             instance.save()
+#             serializer = self.get_serializer(instance)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+
+#         return Response({'error': 'Invalid approval update.'}, status=status.HTTP_400_BAD_REQUEST)
 
 ################### THIS CREDENTIALS OF USER ....... #########################################
 from django.views.decorators.csrf import csrf_exempt
@@ -114,3 +140,15 @@ from django.middleware.csrf import get_token
 def get_csrf_token(request):
     csrf_token = get_token(request)
     return JsonResponse({'csrf_token': csrf_token})
+
+
+######################### APPROVAL VALUE FETCHING ############################
+@csrf_exempt
+def get_approval_status(request, user_id):
+    # Assuming your user model has an 'approval' field
+    try:
+        user = CustomUser.objects.get(id=user_id)
+        approval_status = user.approval
+        return JsonResponse({'approval_status': approval_status})
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)

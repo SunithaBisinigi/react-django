@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const UserForm = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ const UserForm = () => {
   const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Retrieve the access token and user ID from cookies
@@ -62,7 +64,32 @@ const UserForm = () => {
 
       if (response.ok) {
         console.log("Form submitted successfully!");
+        alert("Form submitted successfully.")
+        navigate("/userhome");
+
         // Optionally, you can reset the form or perform other actions here
+        const approvalUpdateResponse = await fetch(
+          `http://127.0.0.1:8000/api/userprofiles/update_approval/${userId}/`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ approval: "p" }),
+          }
+        );
+
+        if (approvalUpdateResponse.ok) {
+          console.log("Approval status updated successfully!");
+          // Optionally, you can reset the form or perform other actions here
+        } else {
+          const responseData = await approvalUpdateResponse.json();
+          console.error(
+            "Failed to update approval status. Response:",
+            responseData
+          );
+          setError("Failed to update approval status. Please try again.");
+        }
       } else {
         const responseData = await response.json();
         console.error("Form submission failed. Response:", responseData);

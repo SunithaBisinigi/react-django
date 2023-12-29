@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
+import { Link } from "react-router-dom";
 
 const Notification = () => {
   const [approvedLinks, setApprovedLinks] = useState([]);
@@ -39,34 +40,36 @@ const Notification = () => {
 
   // ... (other code)
 
-  const handleApprove = async () => {
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/userprofiles/update_approval/${selectedUser.id}/`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ approval: "a" }), // Change 'response' to 'approval'
-        }
-      );
+    const handleApprove = async () => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/api/userprofiles/update_approval/${selectedUser.user_id}/`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ approval: "a" }), // Change 'response' to 'approval'
+          }
+        );
 
-      if (response.ok) {
-        console.log(`Approved: ${selectedUser.userName}`);
-        closeModal();
-      } else {
-        console.error(`Failed to approve: ${selectedUser.userName}`);
+        if (response.ok) {
+          console.log(`Approved: ${selectedUser.userName}`);
+          closeModal();
+          // Reload the page after approval
+          window.location.reload();
+        } else {
+          console.error(`Failed to approve: ${selectedUser.userName}`);
+        }
+      } catch (error) {
+        console.error(`Error approving: ${selectedUser.userName}`, error);
       }
-    } catch (error) {
-      console.error(`Error approving: ${selectedUser.userName}`, error);
-    }
-  };
+    };
 
   const handleReject = async () => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/userprofiles/update_approval/${selectedUser.id}/`,
+        `http://127.0.0.1:8000/api/userprofiles/update_approval/${selectedUser.user_id}/`,
         {
           method: "PUT",
           headers: {
@@ -79,6 +82,8 @@ const Notification = () => {
       if (response.ok) {
         console.log(`Rejected: ${selectedUser.userName}`);
         closeModal();
+        // Reload the page after approval
+        window.location.reload();
       } else {
         console.error(`Failed to reject: ${selectedUser.userName}`);
       }
@@ -105,7 +110,7 @@ const Notification = () => {
       ) : (
         <p>No approved user profiles found.</p>
       )}
-
+      <Link to="/manager">Back</Link>
       <Modal isOpen={modalIsOpen} onRequestClose={closeModal}>
         <h2>{selectedUser?.userName} Approval</h2>
         <p>Do you want to approve or reject?</p>

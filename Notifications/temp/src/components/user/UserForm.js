@@ -1,3 +1,5 @@
+// UserForm.js
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,6 +9,7 @@ const UserForm = () => {
     skills: "",
     languages: "",
     userId: "",
+    formId: "", // Step 1: Add formId to the state
   });
 
   const [accessToken, setAccessToken] = useState("");
@@ -54,7 +57,7 @@ const UserForm = () => {
       setLoading(true);
       setError("");
 
-      const response = await fetch("http://127.0.0.1:8000/create/", {
+      const createResponse = await fetch("http://127.0.0.1:8000/create/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -62,14 +65,15 @@ const UserForm = () => {
         body: JSON.stringify({ ...formData, userId }),
       });
 
-      if (response.ok) {
-        console.log("Form submitted successfully!");
-        alert("Form submitted successfully.")
+      if (createResponse.ok) {
+        const createData = await createResponse.json();
+        console.log("Form submitted successfully!", createData);
+        alert("Form submitted successfully.");
         navigate("/userhome");
 
-        // Optionally, you can reset the form or perform other actions here
+        // Update the approval API to include formId
         const approvalUpdateResponse = await fetch(
-          `http://127.0.0.1:8000/api/userprofiles/update_approval/${userId}/`,
+          `http://127.0.0.1:8000/api/userprofiles/update_approval/${userId}/${createData.form_id}/`,
           {
             method: "PUT",
             headers: {
@@ -91,7 +95,7 @@ const UserForm = () => {
           setError("Failed to update approval status. Please try again.");
         }
       } else {
-        const responseData = await response.json();
+        const responseData = await createResponse.json();
         console.error("Form submission failed. Response:", responseData);
         setError("Form submission failed. Please try again.");
       }
@@ -107,6 +111,18 @@ const UserForm = () => {
     <>
       <h1>Form...</h1>
       <form onSubmit={handleSubmit}>
+        {/* Step 2: Add input field for formId */}
+        <label>
+          Form ID:
+          <input
+            type="text"
+            name="formId"
+            value={formData.formId}
+            onChange={handleChange}
+          />
+        </label>
+        <br />
+        <br />
         <label>
           Qualification:
           <input

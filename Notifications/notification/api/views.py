@@ -12,25 +12,25 @@ from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
 from django.db.models import F
+from django.shortcuts import get_object_or_404
 
-################ THIS IS FOR THE FORM DATA HANDLING....##################################
+################ THIS IS FOR THE FORM DATA creating....##################################
 @api_view(['POST'])
-# @permission_classes([IsAuthenticated])
 def create_user_profile(request):
     user_id = request.data.get('userId')
     qualifications = request.data.get('qualifications')
     skills = request.data.get('skills')
     languages = request.data.get('languages')
+    form_id = request.data.get('formId')  # Ensure you get formId from the request data
 
     # Check if the user exists
     try:
         user = CustomUser.objects.get(id=user_id)
-        print("sunitha this is user.................",user)
     except CustomUser.DoesNotExist:
         return Response({'error': 'User not found'}, status=404)
 
     # Check if the user has a profile
-    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    user_profile, created = UserProfile.objects.get_or_create(user=user, form_id=form_id)
 
     # Update user profile data
     user_profile.qualifications = qualifications
@@ -42,56 +42,57 @@ def create_user_profile(request):
     serializer = UserProfileSerializer(user_profile)
     return Response(serializer.data, status=200)
 
+
+############################# APPROVAL LIST FETCHING  FROM DB ########################################################
+
+from django.db.models import Q
+
 class ApprovalListView(mixins.ListModelMixin, generics.GenericAPIView):
-    queryset = UserProfile.objects.filter(user__approval='p')
     serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        # Filter records where approval is 'p'
+        queryset = UserProfile.objects.filter(approval='p')
+        return queryset
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
+
     
+############################ UPDATING THE APPROVAL #####################################
+
 class UpdateApprovalView(generics.UpdateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        new_approval = request.data.get('approval', None)
+        user_id = kwargs.get('user_id')
+        form_id = kwargs.get('form_id')
+        
+        try:
+            instance = UserProfile.objects.get(user__id=user_id, form_id=form_id)
+        except UserProfile.DoesNotExist:
+            return Response({'error': 'UserProfile not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # If the new approval is 'p', update without checking the current status
+        new_approval = request.data.get('approval', None)
+        remark = request.data.get('remark', None)
+
         if new_approval == 'p':
             instance.approval = new_approval
+            instance.remark = None
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # If the new approval is 'a' or 'r', check the current status
         current_approval = instance.approval
         if current_approval == 'p' and new_approval in ['a', 'r']:
             instance.approval = new_approval
+            instance.remark = remark
             instance.save()
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response({'error': 'Invalid approval update.'}, status=status.HTTP_400_BAD_REQUEST)
-    
-        
-# class UpdateApprovalView(generics.UpdateAPIView):
-#     queryset = CustomUser.objects.all()
-#     serializer_class = UserProfileSerializer
-
-#     def update(self, request, *args, **kwargs):
-#         instance = self.get_object()
-#         print("instance...............",instance)
-#         current_approval = instance.approval
-#         new_approval = request.data.get('approval', None)
-
-#         if current_approval == 'p' and new_approval in ['a', 'r']:
-#             instance.approval = new_approval
-#             instance.save()
-#             serializer = self.get_serializer(instance)
-#             return Response(serializer.data, status=status.HTTP_200_OK)
-
-#         return Response({'error': 'Invalid approval update.'}, status=status.HTTP_400_BAD_REQUEST)
 
 ################### THIS CREDENTIALS OF USER ....... #########################################
 from django.views.decorators.csrf import csrf_exempt
@@ -143,12 +144,17 @@ def get_csrf_token(request):
 
 
 ######################### APPROVAL VALUE FETCHING ############################
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import UserProfile
+
 @csrf_exempt
-def get_approval_status(request, user_id):
-    # Assuming your user model has an 'approval' field
+def get_approval_status(request, user_id, form_id):
     try:
-        user = CustomUser.objects.get(id=user_id)
+        user = UserProfile.objects.get(id=user_id, form_id=form_id)
         approval_status = user.approval
-        return JsonResponse({'approval_status': approval_status})
-    except CustomUser.DoesNotExist:
+        remark = user.remark if user.remark is not None else None  # Include remark only when not null
+        response_data = {'approval_status': approval_status, 'remark': remark}
+        return JsonResponse(response_data)
+    except UserProfile.DoesNotExist:
         return JsonResponse({'error': 'User not found'}, status=404)

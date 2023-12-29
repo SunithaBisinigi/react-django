@@ -3,13 +3,16 @@ from .models import UserProfile, CustomUser
 from django.contrib.auth import authenticate
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    userId = serializers.IntegerField(source='user.id', read_only=True)
-    userName = serializers.CharField(source='user.name', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    user_name = serializers.CharField(source='user.name', read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ['user_id', 'userId', 'userName', 'qualifications', 'skills', 'languages']
-# serializers.py
+        fields = ['user_id', 'user_name', 'qualifications', 'skills', 'languages', 'approval', 'remark', 'form_id']
+
+
+################################### Registration  serializers ################################################
+        
 from rest_framework import serializers
 from .models import CustomUser
 
@@ -29,7 +32,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
         user = CustomUser.objects.create_user(**validated_data)
         return user
 
-# serializers.py
+################################### Login  serializers ################################################
+    
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 

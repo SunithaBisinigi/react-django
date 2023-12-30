@@ -1,6 +1,6 @@
-# models.py
 from django.utils import timezone
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 
 class CustomUserManager(BaseUserManager):
@@ -33,17 +33,16 @@ class CustomUser(AbstractBaseUser):
         return self.email
 
 
-from django.db import models
-from django.conf import settings
-
 class UserProfile(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profiles')
-    qualifications = models.CharField(max_length=100, blank=True, null=True)
-    skills = models.CharField(max_length=100, blank=True, null=True)
-    languages = models.CharField(max_length=100, blank=True, null=True)
+    request = models.CharField(max_length=5000, default='')
     approval = models.CharField(max_length=1, default='p')
     remark = models.CharField(max_length=255, blank=True, null=True)
-    form_id = models.CharField(max_length=100, unique=True)  # Unique form_id per user
+    req_id = models.CharField(max_length=100, unique=True)
+    dateandtime = models.DateTimeField(default=timezone.now)  # Add dateandtime field
 
     def __str__(self):
         return f"{self.user.email}'s Profile"
+
+    class Meta:
+        ordering = ['-dateandtime']  # Sort profiles by dateandtime in descending order
